@@ -16,8 +16,13 @@ required_env_variables.forEach(env_var => {
 const express = require('express')
 const app = express()
 
-const PORT = process.env.PORT
+app.set('view engine', 'pug');
 
-app.listen(port, () => {
+app.get('/', (req, res) => {
+  res.render('welcome', { user: 'Chiru' });
+});
+
+const PORT = process.env.PORT
+app.listen(PORT, () => {
   console.log(`Listening On ${PORT}`)
 })
