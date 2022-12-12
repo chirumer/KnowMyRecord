@@ -1,3 +1,6 @@
+// wallet -> { nonce, expiration }
+export const nonces = new Map();
+
 // get user from token
 export function user_from_token(token) {
   if (!token) {
@@ -26,3 +29,4 @@ export function get_user(wallet_address) {
     aadhaar: '397788000234',
   }
 }
+

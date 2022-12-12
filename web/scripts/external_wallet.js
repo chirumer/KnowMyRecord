@@ -3,8 +3,8 @@ function is_metamask_installed () {
   return Boolean(ethereum && ethereum.isMetaMask);
 };
 
-function metamask_authorize() {
-  
+function authorize() {
+  $(location).prop('href', '/authorize');
 }
 
 $('#back_btn').click(() => {
@@ -22,10 +22,10 @@ if (is_metamask_installed()) {
         throw 'Could Not Access Account';
       }
     } catch (error) {
-      alert(error.message);
+      $('#metamask_btn').prop('disabled', false);
     }
 
-    metamask_authorize();
+    authorize();
   });
 }
 else {

@@ -1,0 +1,13 @@
+-var title = "Login"
+
+html
+  head
+    include ../partials/head.pug 
+    script(defer type='text/javascript' src='/scripts/authorize.js')
+
+  body(class='h-100 d-flex flex-column') 
+    include ../partials/unauthorized_appbar.pug
+
+    div(id='login_container' class='d-flex align-items-center justify-content-center flex-grow-1')
+      div(class='d-flex flex-column')
+        button(id='authorize_btn' type='button' class='btn btn-primary btn-lg m-2')= "Authorize"
