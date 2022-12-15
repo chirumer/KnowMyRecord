@@ -28,6 +28,7 @@ $('#authorize_btn').click(async () => {
     });
   }
   catch(err) {
+    alert(`Authentication Failed: (${ err.message })`);
     $('#authorize_btn').prop('disabled', false);
     return;
   }
@@ -39,12 +40,12 @@ $('#authorize_btn').click(async () => {
     },
     body: JSON.stringify({ wallet_address, signature }),
   })
-  const { success } = await auth_response.json();
 
-  if (success) {
+  if (auth_response.ok) {
     $(location).prop('href', '/');
   }
   else {
-    alert('Authorization Failed');
+    const { failure_reason } = await auth_response.json();
+    alert(`Authentication Failed: (${ failure_reason })`);
   }
 });

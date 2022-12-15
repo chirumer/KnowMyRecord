@@ -1,0 +1,59 @@
+-var title = "Registration"
+
+// Pills navs
+html
+  head
+    include ../partials/head.pug 
+    script(defer type='text/javascript' src='/scripts/registration.js')
+
+  body(class='h-100 d-flex flex-column') 
+    include ../partials/authorized_appbar.pug
+
+    div(id='container' class='d-flex flex-column align-items-center justify-content-center flex-grow-1')
+
+      ul#myTab.nav.nav-tabs(role='tablist').m-2
+        li.nav-item(role='presentation')
+          button.nav-link.active(id='patient' data-bs-toggle='tab', data-bs-target='#patient_details', type='button', role='tab', aria-controls='patient', aria-selected='true') Patient
+        li.nav-item(role='presentation')
+          button.nav-link(id='hospital' data-bs-toggle='tab', data-bs-target='#hospital_details', type='button', role='tab', aria-controls='hospital', aria-selected='false') Hospital
+    
+      #myTabContent.tab-content
+
+        #patient_details.tab-pane.fade.show.active(role='tabpanel', aria-labelledby='patient-tab')
+
+          .form-group.row
+            label.m-2.col.col-form-label(for='wallet_address') Wallet Address
+            .col.m-2.align-items-center
+              input#wallet_address.form-control-plaintext(type='text' readonly='' value=wallet_address)
+          .form-group.row
+            label.m-2.col.col-form-label(for='aadhaar') Aadhaar
+            .col.m-2.align-items-center
+              input#aadhaar.form-control(type='text' placeholder='12 digit number')
+          .form-group.row
+            label.m-2.col.col-form-label(for='name') Name
+            .col.m-2.align-items-center
+              input#name.form-control(type='text' placeholder='Full Name')
+
+
+        #hospital_details.tab-pane.fade(role='tabpanel', aria-labelledby='hospital-tab')
+
+          .form-group.row
+            label.m-2.col.col-form-label(for='wallet_address') Wallet Address
+            .col.m-2.align-items-center
+              input#wallet_address.form-control-plaintext(type='text' readonly='' value=wallet_address)
+          .form-group.row
+            label.m-2.col.col-form-label(for='hin') Healthcare Industry Number
+            .col.m-2.d-flex.align-items-center
+              input#hin.form-control(type='text' placeholder='9 letters identifier')
+          .form-group.row
+            label.m-2.col.col-form-label(for='name') Hospital Name
+            .col.m-2.align-items-center
+              input#name.form-control(type='text' placeholder='Name Of Hospital')
+          .form-group.row
+            label.m-2.col.col-form-label(for='location') Hospital Name
+            .col.m-2.align-items-center
+              input#location.form-control(type='text' placeholder='Location Of Hospital')
+
+
+        div(class='text-center')
+          button(id='register_btn' type='button' class='btn btn-primary m-2') Register
