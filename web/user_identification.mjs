@@ -1,5 +1,7 @@
 import jwt from 'jsonwebtoken';
 
+import { get_user_type } from './users.mjs';
+
 
 // wallet -> { nonce, expiration }
 export const nonces = new Map();
@@ -27,22 +29,49 @@ export function authorize(req, res, next) {
     next();
   }
   else {
-    res.status(403).end();
+    const HTTP_UNAUTHORIZED = 401;
+    res.status(HTTP_UNAUTHORIZED).end();
   }
 }
 
-// TEMPORARY ONLY
-const users = new Map();
+// route accessible only to patients 
+export function patient_route(req, res, next) {
 
-// get user information
-export function get_user(wallet_address) {
-
-  // TEMPORARY ONLY
-  return users.get(wallet_address);
+  authorize(req, res, () => {
+    if (get_user_type(req.wallet_address) != 'patient') {
+      const HTTP_UNAUTHORIZED = 401;
+      res.status(HTTP_UNAUTHORIZED).end();
+    }
+    else {
+      next();
+    }
+  });
 }
 
-export function add_user(wallet_address, user_details) {
+// route accessible only to hospitals 
+export function hospital_route(req, res, next) {
 
-  // TEMPORARY ONLY
-  users.set(wallet_address, user_details);
+  authorize(req, res, () => {
+    if (get_user_type(req.wallet_address) != 'hospitals') {
+      const HTTP_UNAUTHORIZED = 401;
+      res.status(HTTP_UNAUTHORIZED).end();
+    }
+    else {
+      next();
+    }
+  });
+}
+
+// route accessible only to admins 
+export function admin_route(req, res, next) {
+
+  authorize(req, res, () => {
+    if (get_user_type(req.wallet_address) != 'admin') {
+      const HTTP_UNAUTHORIZED = 401;
+      res.status(HTTP_UNAUTHORIZED).end();
+    }
+    else {
+      next();
+    }
+  });
 }

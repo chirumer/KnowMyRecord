@@ -19,15 +19,21 @@ import path from 'path'
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import jwt from 'jsonwebtoken';
+import http from 'http';
+import url from 'url';
 
 import { recoverTypedSignature } from '@metamask/eth-sig-util';
 
-import { wallet_address_from_token, get_user, add_user, authorize } from './user_identification.mjs'
+import { wallet_address_from_token } from './user_identification.mjs'
+import { get_user, add_user, get_username, change_authorization_status } from './users.mjs'
+import { authorize, patient_route, hospital_route, admin_route } from './user_identification.mjs'
+import { get_unverified_users } from './users.mjs'
 import { nonces } from './user_identification.mjs';
 import { randomUUID } from 'crypto';
-import { runInNewContext } from 'vm';
+import { WebSocketServer } from 'ws';
 
 const app = express();
+const server = http.createServer(app);
 
 
 // express middleware
@@ -40,7 +46,46 @@ app.use('/scripts', express.static(path.join(__dirname, 'node_modules/@metamask/
 
 
 
+const user_verification_ws_server = new WebSocketServer({ noServer: true, path: '/verify_new_users' });
+user_verification_ws_server.on('connection', socket => {
 
+  socket.on('message', message => {
+    const { type, data } = JSON.parse(message);
+
+    if (type == 'user_verification_response') {
+
+      const { wallet_address, new_authorization_status } = data;
+      change_authorization_status(wallet_address, new_authorization_status);
+
+      const { request_no } = data;
+      socket.send(JSON.stringify({ type: 'response_received', data: { request_no } }));
+    }
+  });
+
+  const unverified_users = get_unverified_users();
+  unverified_users.forEach(user => {
+
+    const send_data = {
+      type: 'user_verification_request',
+      data: user
+    }
+
+    socket.send(JSON.stringify(send_data));
+  });
+});
+
+server.on('upgrade', (request, socket, head) => {
+  const pathname = request.url;
+
+  if (pathname == '/verify_new_users') {
+    user_verification_ws_server.handleUpgrade(request, socket, head, socket => {
+      user_verification_ws_server.emit('connection', socket, request);
+    });
+  }
+  else {
+    socket.destroy();
+  }
+});
 
 // home route
 app.get('/', (req, res) => {
@@ -57,7 +102,7 @@ app.get('/', (req, res) => {
     res.render('registration', { username: 'Unregistered User', wallet_address });
     return;
   }
-  else if (!user.authorized) {
+  else if (user.authorization_status == 'pending') {
     const { authorization_req_id } = user;
     res.render('registration-requested', { authorization_req_id, username: user.name })
     return;
@@ -101,20 +146,13 @@ app.post('/register', authorize, (req, res) => {
     return;
   }
 
-  const { user_type } = req.body;
+  const user_details = req.body;
 
   const new_user = {
-    authorized: false,
+    authorization_status: 'pending',
     authorization_req_id: randomUUID(),
+    ...user_details
   };
-  if (user_type == 'patient') {
-    const { aadhaar, name } = req.body;
-    new_user.aadhaar = aadhaar;
-    new_user.name = name;
-  }
-  else if (user_type == 'hospital') {
-     // fill in
-  }
   add_user(req.wallet_address, new_user);
 
   res.status(200).end();
@@ -180,9 +218,15 @@ app.get('/nonce', (req, res) => {
   res.json({ nonce });
 });
 
+// admin -> verify new users
+app.get('/verify_new_users', admin_route, (req, res) => {
+  const username = get_username(req.wallet_address);
+  res.render('verify_new_users', { username });
+});
+
 
 // start server
 const PORT = process.env.PORT;
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Listening On ${PORT}`)
 });
