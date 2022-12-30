@@ -52,7 +52,7 @@ export function patient_route(req, res, next) {
 export function hospital_route(req, res, next) {
 
   authorize(req, res, () => {
-    if (get_user_type(req.wallet_address) != 'hospitals') {
+    if (get_user_type(req.wallet_address) != 'hospital') {
       const HTTP_UNAUTHORIZED = 401;
       res.status(HTTP_UNAUTHORIZED).end();
     }

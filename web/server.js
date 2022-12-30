@@ -3,11 +3,17 @@ import dotenv from 'dotenv';
 dotenv.config()
 
 // verify the required environment variables are configured
-import { verify_env_defined, random_uint32 } from './helpers.mjs'
+import { verify_env_defined, random_uint32, create_directory_if_not_exist } from './helpers.mjs'
 const required_env_variables = ['PORT', 'NODE_ENV', 'TOKEN_SECRET'];
 required_env_variables.forEach(env_var => {
   verify_env_defined(env_var);
 });
+
+// create 
+create_directory_if_not_exist('temp/uploads');
+
+// TEMPORARY ONLY
+create_directory_if_not_exist('temp/blobs');
 
 
 import { fileURLToPath } from 'url';
@@ -21,6 +27,8 @@ import cookieParser from 'cookie-parser';
 import jwt from 'jsonwebtoken';
 import http from 'http';
 import url from 'url';
+import formidableMiddleware from 'express-formidable';
+
 
 import { recoverTypedSignature } from '@metamask/eth-sig-util';
 
@@ -29,8 +37,15 @@ import { get_user, add_user, get_username, change_authorization_status } from '.
 import { authorize, patient_route, hospital_route, admin_route } from './user_identification.mjs'
 import { get_unverified_users } from './users.mjs'
 import { nonces } from './user_identification.mjs';
-import { randomUUID } from 'crypto';
+import { blob_timed_out, get_blob_info, blob_exists, 
+          is_blob_unverified, is_owner_of_blob, add_unverified_blob } from './blob.mjs';
+import { randomUUID } from 'crypto'
 import { WebSocketServer } from 'ws';
+import { fstat } from 'fs';
+
+
+
+
 
 const app = express();
 const server = http.createServer(app);
@@ -39,12 +54,12 @@ const server = http.createServer(app);
 // express middleware
 app.set('view engine', 'pug');
 app.use(cookieParser());
-app.use(express.json());
 app.use('/scripts', express.static(path.join(__dirname, 'scripts')))
 app.use('/assets', express.static(path.join(__dirname, 'assets')))
 app.use('/scripts', express.static(path.join(__dirname, 'node_modules/@metamask/onboarding/dist')));
-
-
+app.use(formidableMiddleware({
+  uploadDir: path.join(__dirname, 'temp/uploads')
+}));
 
 const user_verification_ws_server = new WebSocketServer({ noServer: true, path: '/verify_new_users' });
 user_verification_ws_server.on('connection', socket => {
@@ -146,7 +161,7 @@ app.post('/register', authorize, (req, res) => {
     return;
   }
 
-  const user_details = req.body;
+  const user_details = req.fields;
 
   const new_user = {
     authorization_status: 'pending',
@@ -160,7 +175,7 @@ app.post('/register', authorize, (req, res) => {
 
 // authorize user
 app.post('/authorize', (req, res) => {
-  const { wallet_address, signature } = req.body;
+  const { wallet_address, signature } = req.fields;
 
   if (!nonces.get(wallet_address) || Date.now() >= nonces.get(wallet_address).expiration) {
     res.status(400).json({ failure_reason: 'nonce timeout' })
@@ -222,6 +237,53 @@ app.get('/nonce', (req, res) => {
 app.get('/verify_new_users', admin_route, (req, res) => {
   const username = get_username(req.wallet_address);
   res.render('verify_new_users', { username });
+});
+
+app.get('/upload_patient_record', hospital_route, (req, res) => {
+  const username = get_username(req.wallet_address);
+  res.render('upload_patient_record', { username });
+});
+
+app.post('/upload_patient_record', hospital_route, (req, res) => {
+
+  const blob_uuid = randomUUID();
+
+  const file = req.files.file;
+  const { file_name } = req.fields;
+  const owner = req.wallet_address;
+
+  // async call
+  add_unverified_blob({ blob_uuid, file, file_name, owner });
+
+  res.json({ blob_uuid });
+});
+
+app.get('/new_patient_record_details', hospital_route, (req, res) => {
+
+  const wallet_address = req.wallet_address;
+  const username = get_username(req.wallet_address);
+
+  const blob_uuid = req.query.blob_uuid;
+  const blob_info = get_blob_info(blob_uuid);
+
+  if (blob_uuid == undefined) {
+    res.status(404).render('error_page', { username, error_msg: `Badly formed url` });
+    return;
+  }
+  if (!blob_exists(blob_info)) {
+    res.status(404).render('error_page', { username, error_msg: `Blob ${blob_uuid} does not exist` });
+    return;
+  }
+  else if (!is_owner_of_blob(wallet_address, blob_info)) {
+    res.status(404).render('error_page', { username, error_msg: `You do not own the Blob ${blob_uuid} `});
+    return;
+  }
+  else if (blob_timed_out(blob_info)) {
+    res.status(404).render('error_page', { username, error_msg: `Blob ${blob_uuid} has timed out` })
+    return;
+  }
+
+  res.render('new_patient_record_details', { username })
 });
 
 
