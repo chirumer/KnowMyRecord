@@ -65,8 +65,12 @@ app.use(formidableMiddleware({
 }));
 
 
+const user_verification_sockets = new Set();
+
 const user_verification_ws_server = new WebSocketServer({ noServer: true, path: '/verify_new_users' });
 user_verification_ws_server.on('connection', socket => {
+
+  user_verification_sockets.add(socket);
 
   socket.on('message', message => {
     const { type, data } = JSON.parse(message);
@@ -74,11 +78,16 @@ user_verification_ws_server.on('connection', socket => {
     if (type == 'user_verification_response') {
 
       const { wallet_address, new_authorization_status } = data;
+      console.log(wallet_address);
       change_authorization_status(wallet_address, new_authorization_status);
 
       const { request_no } = data;
       socket.send(JSON.stringify({ type: 'response_received', data: { request_no } }));
     }
+  });
+
+  socket.on('close', () => {
+    user_verification_sockets.delete(socket);
   });
 
   const unverified_users = get_unverified_users();
@@ -173,6 +182,15 @@ app.post('/register', authorize, (req, res) => {
     ...user_details
   };
   add_user(req.wallet_address, new_user);
+
+  user_verification_sockets.forEach(socket => {
+    const send_data = {
+      type: 'user_verification_request',
+      data: new_user
+    }
+
+    socket.send(JSON.stringify(send_data));
+  });
 
   res.status(200).end();
 });
