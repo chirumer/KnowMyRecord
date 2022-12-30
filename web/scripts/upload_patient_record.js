@@ -5,6 +5,7 @@ $('#whole_file_upload_btn').click(async () => {
   const form_data = new FormData();
   if ($('#file_input')[0].files.length == 0) {
     alert('no file selected');
+    $('#whole_file_upload_btn').prop('disabled', false);
     return;
   }
   const file = $('#file_input')[0].files[0]

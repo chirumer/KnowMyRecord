@@ -3,7 +3,8 @@ import dotenv from 'dotenv';
 dotenv.config()
 
 // verify the required environment variables are configured
-import { verify_env_defined, random_uint32, create_directory_if_not_exist } from './helpers.mjs'
+import { verify_env_defined, random_uint32, 
+        create_directory_if_not_exist, calculate_checksum } from './helpers.mjs'
 const required_env_variables = ['PORT', 'NODE_ENV', 'TOKEN_SECRET'];
 required_env_variables.forEach(env_var => {
   verify_env_defined(env_var);
@@ -13,7 +14,7 @@ required_env_variables.forEach(env_var => {
 create_directory_if_not_exist('temp/uploads');
 
 // TEMPORARY ONLY
-create_directory_if_not_exist('temp/blobs');
+create_directory_if_not_exist('blobs');
 
 
 import { fileURLToPath } from 'url';
@@ -22,6 +23,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 import path from 'path'
+import fs from 'fs'
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import jwt from 'jsonwebtoken';
@@ -33,11 +35,12 @@ import formidableMiddleware from 'express-formidable';
 import { recoverTypedSignature } from '@metamask/eth-sig-util';
 
 import { wallet_address_from_token } from './user_identification.mjs'
-import { get_user, add_user, get_username, change_authorization_status } from './users.mjs'
+import { get_user, add_user, get_username, change_authorization_status,
+          get_patient_with_aadhaar } from './users.mjs'
 import { authorize, patient_route, hospital_route, admin_route } from './user_identification.mjs'
 import { get_unverified_users } from './users.mjs'
 import { nonces } from './user_identification.mjs';
-import { blob_timed_out, get_blob_info, blob_exists, 
+import { blob_timed_out, get_blob_info, blob_exists, can_access_blob,
           is_blob_unverified, is_owner_of_blob, add_unverified_blob } from './blob.mjs';
 import { randomUUID } from 'crypto'
 import { WebSocketServer } from 'ws';
@@ -60,6 +63,7 @@ app.use('/scripts', express.static(path.join(__dirname, 'node_modules/@metamask/
 app.use(formidableMiddleware({
   uploadDir: path.join(__dirname, 'temp/uploads')
 }));
+
 
 const user_verification_ws_server = new WebSocketServer({ noServer: true, path: '/verify_new_users' });
 user_verification_ws_server.on('connection', socket => {
@@ -263,7 +267,7 @@ app.get('/new_patient_record_details', hospital_route, (req, res) => {
   const wallet_address = req.wallet_address;
   const username = get_username(req.wallet_address);
 
-  const blob_uuid = req.query.blob_uuid;
+  const { blob_uuid } = req.query;
   const blob_info = get_blob_info(blob_uuid);
 
   if (blob_uuid == undefined) {
@@ -283,9 +287,52 @@ app.get('/new_patient_record_details', hospital_route, (req, res) => {
     return;
   }
 
-  res.render('new_patient_record_details', { username })
+  const { file_name } = blob_info;
+  res.render('new_patient_record', { username, wallet_address, blob_uuid, file_name })
 });
 
+app.get('/blob', authorize, (req, res) => {
+  const wallet_address = req.wallet_address;
+  const { blob_uuid } = req.query;
+
+  const blob_info = get_blob_info(blob_uuid);
+
+  if (blob_info == undefined || !can_access_blob(wallet_address, blob_info)) {
+    const username = get_username(req.wallet_address);
+    res.status(404).render('error_page', { username, error_msg: `You do not have access to the Blob ${blob_uuid} `});
+    return;
+  }
+
+  // temporary
+  res.attachment(blob_info.file_name).sendFile(path.join(__dirname, `blobs/${blob_info.blob_name}`));
+});
+
+app.get('/get_patient', (req, res) => {
+  const { patient_aadhaar } = req.query;
+  
+  const wallet_address = get_patient_with_aadhaar(patient_aadhaar);
+
+  if (wallet_address == null) {
+    res.status(404).json({ error_reason: `No Patient With Aadhaar (${patient_aadhaar})` });
+    return;
+  }
+  res.json({ wallet_address });
+});
+
+app.get('/get_checksum', (req, res) => {
+  const { blob_uuid } = req.query;
+  const blob_info = get_blob_info(blob_uuid);
+
+  if (!blob_exists(blob_info)) {
+    res.status(404).json({ error_reason: `No Blob With blob_uuid (${blob_uuid})` });
+    return;
+  }
+
+  const file_data = fs.readFileSync(path.join(__dirname, `blobs/${blob_info.blob_name}`));
+  const checksum = calculate_checksum(file_data);
+
+  res.json({ checksum });
+});
 
 // start server
 const PORT = process.env.PORT;
