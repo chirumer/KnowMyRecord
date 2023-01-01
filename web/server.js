@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 dotenv.config()
 
 // verify the required environment variables are configured
-import { verify_env_defined, random_uint32, 
+import { verify_env_defined, random_uint32, random_16bytes_hex, 
         create_directory_if_not_exist, calculate_checksum } from './helpers.mjs'
 const required_env_variables = ['PORT', 'NODE_ENV', 'TOKEN_SECRET'];
 required_env_variables.forEach(env_var => {
@@ -44,7 +44,6 @@ import { blob_timed_out, get_blob_info, blob_exists, can_access_blob,
           is_blob_unverified, is_owner_of_blob, add_unverified_blob } from './blob.mjs';
 import { randomUUID } from 'crypto'
 import { WebSocketServer } from 'ws';
-import { fstat } from 'fs';
 
 
 
@@ -64,6 +63,8 @@ app.use(formidableMiddleware({
   uploadDir: path.join(__dirname, 'temp/uploads')
 }));
 
+// js modules
+app.use('/node_modules/ethers', express.static(__dirname + '/node_modules/ethers/dist'));
 
 const user_verification_sockets = new Set();
 
@@ -78,7 +79,6 @@ user_verification_ws_server.on('connection', socket => {
     if (type == 'user_verification_response') {
 
       const { wallet_address, new_authorization_status } = data;
-      console.log(wallet_address);
       change_authorization_status(wallet_address, new_authorization_status);
 
       const { request_no } = data;
@@ -268,7 +268,7 @@ app.get('/upload_patient_record', hospital_route, (req, res) => {
 
 app.post('/upload_patient_record', hospital_route, (req, res) => {
 
-  const blob_uuid = randomUUID();
+  const blob_uuid = random_16bytes_hex();
 
   const file = req.files.file;
   const { file_name } = req.fields;

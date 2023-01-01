@@ -19,6 +19,10 @@ export function random_uint32() {
   return crypto.randomBytes(4).readUInt32BE(0, true);
 }
 
+export function random_16bytes_hex() {
+  return crypto.randomBytes(16).toString('hex');
+}
+
 export function create_directory_if_not_exist(_path) {
   const dir_path = path.join(__dirname, _path);
 
