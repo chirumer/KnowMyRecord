@@ -3,7 +3,6 @@
 html
   head
     include ../partials/head.pug 
-    script(defer type='text/javascript' src='/scripts/admin_dashboard.js')
 
   body(class='h-100 d-flex flex-column') 
     include ../partials/authorized_appbar.pug
@@ -13,6 +12,9 @@ html
       
         a(href='/verify_new_users')
           button(type='button' class='btn btn-primary btn-lg m-2 w-100') Verify New Users
+        
+        a(href='/activity')
+          button(type='button' class='btn btn-primary btn-lg m-2 w-100') View Account Activity
       
         a(href='/edit_profile')
           button(type='button' class='btn btn-primary btn-lg m-2 w-100') Edit Profile

@@ -34,7 +34,8 @@ import { recoverTypedSignature } from '@metamask/eth-sig-util';
 
 import { wallet_address_from_token } from './user_identification.mjs'
 import { get_user, add_user, get_username, change_authorization_status,
-          get_patient_with_aadhaar } from './users.mjs'
+          get_patient_with_aadhaar, 
+          get_user_activity} from './users.mjs'
 import { authorize, patient_route, hospital_route, admin_route } from './user_identification.mjs'
 import { get_unverified_users } from './users.mjs'
 import { nonces } from './user_identification.mjs';
@@ -65,6 +66,7 @@ app.use(formidableMiddleware({
 app.use('/node_modules/ethers', express.static(__dirname + '/node_modules/ethers/dist'));
 
 const user_verification_sockets = new Set();
+const activity_sockets = new Map();
 
 const user_verification_ws_server = new WebSocketServer({ noServer: true, path: '/verify_new_users' });
 user_verification_ws_server.on('connection', socket => {
@@ -100,18 +102,58 @@ user_verification_ws_server.on('connection', socket => {
   });
 });
 
+const activity_ws_server = new WebSocketServer({ noServer: true, path: '/activity' });
+activity_ws_server.on('connection', socket => {
+
+  socket.on('close', () => {
+    activity_sockets.delete(socket);
+  }); 
+
+  const activities = get_user_activity(activity_sockets.get(socket));
+  activities.forEach(activity => {
+
+    const send_data = {
+      type: 'activity',
+      data: activity
+    }
+
+    socket.send(JSON.stringify(send_data));
+  });
+});
+
+
 server.on('upgrade', (request, socket, head) => {
   const pathname = request.url;
 
-  if (pathname == '/verify_new_users') {
+  // parse cookies
+  let cookies;
+  const { headers: { cookie } } = request;
+  if (cookie) {
+    cookies = cookie.split(';').reduce((res, item) => {
+      const data = item.trim().split('=');
+      return { ...res, [data[0]]: data[1] };
+    }, {});
+  }
+
+  const wallet_address = wallet_address_from_token(cookies['access_token']);
+  const user_type = get_user(wallet_address).user_type;
+
+  if (pathname == '/verify_new_users' && user_type == 'admin') {
     user_verification_ws_server.handleUpgrade(request, socket, head, socket => {
       user_verification_ws_server.emit('connection', socket, request);
+    });
+  }
+  else if (pathname == '/activity') {
+    activity_ws_server.handleUpgrade(request, socket, head, socket => {
+      activity_sockets.set(socket, wallet_address);
+      activity_ws_server.emit('connection', socket, request);
     });
   }
   else {
     socket.destroy();
   }
 });
+
 
 // home route
 app.get('/', (req, res) => {
@@ -259,6 +301,11 @@ app.get('/nonce', (req, res) => {
   res.json({ nonce });
 });
 
+app.get('/activity', authorize, (req, res) => {
+  const username = get_username(req.wallet_address);
+  res.render('activity', { username });
+});
+
 // admin -> verify new users
 app.get('/verify_new_users', admin_route, (req, res) => {
   const username = get_username(req.wallet_address);
@@ -308,7 +355,7 @@ app.get('/new_patient_record_details', hospital_route, (req, res) => {
     res.status(404).render('error_page', { username, error_msg: `Blob ${blob_uuid} has timed out.` })
     return;
   }
-  else if (blob_info.verification_status != 'pending') {
+  else if (blob_info.verification_status != 'unverified') {
     res.status(404).render('error_page', { username, error_msg: `Blob ${blob_uuid} is not pending.` })
     return;
   }

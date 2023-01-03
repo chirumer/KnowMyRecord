@@ -5,7 +5,7 @@ dotenv.config()
 import ethers from 'ethers';
 import { contract_abis, contract_addresses } from './contract_infos.mjs';
 import { verify_blob } from './blob.mjs'
-import { add_to_user_activity, get_username  } from './users.mjs'
+import { add_to_user_activity, get_user  } from './users.mjs'
 
 
 const provider = new ethers.providers.WebSocketProvider(
@@ -15,10 +15,14 @@ const provider = new ethers.providers.WebSocketProvider(
 const addition_contract = new ethers.Contract(contract_addresses.addition_contract, contract_abis.addition_contract, provider);
 addition_contract.on('RequestAddition', (patient, hospital, blob_id, blob_checksum, req_id) => {
 
+  patient = patient.toLowerCase();
+  hospital = hospital.toLowerCase();
+  req_id = req_id.number;
+
   add_to_user_activity(hospital, { 
     event: 'Record Addition Request',
     timestamp: Date.now(),
-    patient_aadhaar: get_username(patient),
+    patient_aadhaar: get_user(patient).aadhaar,
     blob_id,
     blob_checksum,
     req_id
@@ -27,7 +31,7 @@ addition_contract.on('RequestAddition', (patient, hospital, blob_id, blob_checks
   add_to_user_activity(patient, { 
     event: 'Record Addition Request',
     timestamp: Date.now(),
-    hospital: get_username(hospital),
+    hospital_HIN: get_user(hospital).hin,
     blob_id,
     blob_checksum,
     req_id
