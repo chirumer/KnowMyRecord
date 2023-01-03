@@ -44,8 +44,7 @@ import { blob_timed_out, get_blob_info, blob_exists, can_access_blob,
           is_blob_unverified, is_owner_of_blob, add_unverified_blob } from './blob.mjs';
 import { randomUUID } from 'crypto'
 import { WebSocketServer } from 'ws';
-
-
+import { contract_addresses, contract_abis } from './contract_infos.mjs';
 
 
 
@@ -165,6 +164,12 @@ app.get('/logout', authorize, (req, res) => {
 // clearing web token
 app.post('/logout', authorize, (req, res) => {
   res.clearCookie("access_token").status(200).end();
+});
+
+// get user wallet address
+app.get('/wallet_address', authorize, (req, res) => {
+  const wallet_address = req.wallet_address;
+  res.json({ wallet_address });
 });
 
 // register a new user
@@ -337,6 +342,30 @@ app.get('/get_patient', (req, res) => {
   res.json({ wallet_address });
 });
 
+app.get('/contract_address', (req, res) => {
+  const { contract } = req.query;
+
+  const contract_address = contract_addresses[contract];
+  if (contract_address == undefined) {
+    res.status(404).end();
+    return;
+  }
+
+  res.json({ contract_address });
+});
+
+app.get('/contract_abi', (req, res) => {
+  const { contract } = req.query;
+
+  const contract_abi = contract_abis[contract];
+  if (contract_abi == undefined) {
+    res.status(404).end();
+    return;
+  }
+
+  res.json({ contract_abi });
+});
+
 app.get('/get_checksum', (req, res) => {
   const { blob_uuid } = req.query;
   const blob_info = get_blob_info(blob_uuid);
@@ -351,6 +380,12 @@ app.get('/get_checksum', (req, res) => {
 
   res.json({ checksum });
 });
+
+
+app.get('/partials/confirmation_tracking', authorize, (req, res) => {
+  res.render('../partials/confirmation_tracking');
+});
+
 
 // start server
 const PORT = process.env.PORT;
