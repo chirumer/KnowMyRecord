@@ -15,7 +15,7 @@ export function wallet_address_from_token(token) {
     const data = jwt.verify(token, process.env.TOKEN_SECRET);
     return data.wallet_address;
   }
-  catch {
+  catch (err) {
     console.log(err);
     return null;
   }

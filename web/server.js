@@ -317,11 +317,13 @@ app.get('/blob', authorize, (req, res) => {
   const wallet_address = req.wallet_address;
   const { blob_uuid } = req.query;
 
-  const blob_access = blob_access(wallet_address, blob_uuid);
-  if (!blob_access.can_access) {
+  const access_info = blob_access(wallet_address, blob_uuid);
+  if (!access_info.can_access) {
     res.status(404).end();
       return;
   }
+
+  const blob_info = get_blob_info(blob_uuid);
   res.attachment(blob_info.file_name).sendFile(path.join(__dirname, `blobs/${blob_info.blob_name}`)); 
 });
 

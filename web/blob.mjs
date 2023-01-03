@@ -6,9 +6,9 @@ import path from 'path'
 import fs from 'fs';
 import { randomUUID } from 'crypto';
 
+export const blob_access_list = new Map();
 
 const blob_infos = new Map();
-const blob_access_list = new Map();
 
 // get blob
 export function get_blob_info(blob_uuid) {
