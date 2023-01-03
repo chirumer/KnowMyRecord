@@ -367,7 +367,7 @@ app.get('/get_checksum', (req, res) => {
   const { blob_uuid } = req.query;
   const blob_info = get_blob_info(blob_uuid);
 
-  if (!blob_exists(blob_info)) {
+  if (blob_info == undefined) {
     res.status(404).json({ error_reason: `No Blob With blob_uuid (${blob_uuid})` });
     return;
   }
