@@ -5,15 +5,13 @@ dotenv.config()
 // verify the required environment variables are configured
 import { verify_env_defined, random_uint32, random_16bytes_hex, 
         create_directory_if_not_exist, calculate_checksum } from './helpers.mjs'
-const required_env_variables = ['PORT', 'NODE_ENV', 'TOKEN_SECRET'];
+const required_env_variables = ['PORT', 'NODE_ENV', 'TOKEN_SECRET', 'BLOCKCHAIN_PROVIDER_URL'];
 required_env_variables.forEach(env_var => {
   verify_env_defined(env_var);
 });
 
 // create 
 create_directory_if_not_exist('temp/uploads');
-
-// TEMPORARY ONLY
 create_directory_if_not_exist('blobs');
 
 
@@ -40,11 +38,12 @@ import { get_user, add_user, get_username, change_authorization_status,
 import { authorize, patient_route, hospital_route, admin_route } from './user_identification.mjs'
 import { get_unverified_users } from './users.mjs'
 import { nonces } from './user_identification.mjs';
-import { blob_timed_out, get_blob_info, blob_exists, can_access_blob,
-          is_blob_unverified, is_owner_of_blob, add_unverified_blob } from './blob.mjs';
+import { get_blob_info, blob_access, add_unverified_blob } from './blob.mjs';
 import { randomUUID } from 'crypto'
 import { WebSocketServer } from 'ws';
 import { contract_addresses, contract_abis } from './contract_infos.mjs';
+
+import {} from './contract_listeners.mjs';
 
 
 
@@ -297,15 +296,15 @@ app.get('/new_patient_record_details', hospital_route, (req, res) => {
     res.status(404).render('error_page', { username, error_msg: `Badly formed url` });
     return;
   }
-  if (!blob_exists(blob_info)) {
+  if (blob_info == undefined) {
     res.status(404).render('error_page', { username, error_msg: `Blob ${blob_uuid} does not exist` });
     return;
   }
-  else if (!is_owner_of_blob(wallet_address, blob_info)) {
+  else if (blob_info.owner != wallet_address) {
     res.status(404).render('error_page', { username, error_msg: `You do not own the Blob ${blob_uuid} `});
     return;
   }
-  else if (blob_timed_out(blob_info)) {
+  else if (Date.now() >= blob_info.expires_at) {
     res.status(404).render('error_page', { username, error_msg: `Blob ${blob_uuid} has timed out` })
     return;
   }
@@ -318,16 +317,12 @@ app.get('/blob', authorize, (req, res) => {
   const wallet_address = req.wallet_address;
   const { blob_uuid } = req.query;
 
-  const blob_info = get_blob_info(blob_uuid);
-
-  if (blob_info == undefined || !can_access_blob(wallet_address, blob_info)) {
-    const username = get_username(req.wallet_address);
-    res.status(404).render('error_page', { username, error_msg: `You do not have access to the Blob ${blob_uuid} `});
-    return;
+  const blob_access = blob_access(wallet_address, blob_uuid);
+  if (!blob_access.can_access) {
+    res.status(404).end();
+      return;
   }
-
-  // temporary
-  res.attachment(blob_info.file_name).sendFile(path.join(__dirname, `blobs/${blob_info.blob_name}`));
+  res.attachment(blob_info.file_name).sendFile(path.join(__dirname, `blobs/${blob_info.blob_name}`)); 
 });
 
 app.get('/get_patient', (req, res) => {
@@ -380,7 +375,6 @@ app.get('/get_checksum', (req, res) => {
 
   res.json({ checksum });
 });
-
 
 app.get('/partials/confirmation_tracking', authorize, (req, res) => {
   res.render('../partials/confirmation_tracking');

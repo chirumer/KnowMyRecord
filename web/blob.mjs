@@ -7,56 +7,44 @@ import fs from 'fs';
 import { randomUUID } from 'crypto';
 
 
-// TEMPORARY ONLY
 const blob_infos = new Map();
 const blob_access_list = new Map();
 
 // get blob
 export function get_blob_info(blob_uuid) {
-
-  // TEMPORARY ONLY
   return blob_infos.get(blob_uuid);
 }
 
-// if blob exists
-export function blob_exists(blob_info) {
-  return blob_info != null;
-}
+export function blob_access(wallet_address, blob_uuid) {
 
-// is blob timed out
-export function blob_timed_out(blob_info) {
-  return blob_info.expiry_time >= Date.now();
-}
+  const blob_info = get_blob_info(blob_uuid);
 
-// verify ownership of blob
-export function is_owner_of_blob(wallet_address, blob_info) {
-  return wallet_address == blob_info.owner;
-}
+  if (blob_info == undefined) {
+    return { can_access: false, denied_access_reason: 'Blob does not exist.' };
+  }
 
-// is blob unverified
-export function is_blob_unverified(blob_info) {
-  return blob_verification_status == 'unverified';
-}
+  if (blob_info.verification_status == 'unverified' && Date.now() >= blob_info.expires_at) {
+    return { can_access: false, denied_access_reason: 'Blob has expired (no patient confirmation).' };
+  }
 
-export function can_access_blob(wallet_address, blob_info) {
-  // defaults
+  // patient and hospital always have access
   if (wallet_address == blob_info.owner || wallet_address == blob_info.patient) {
-    return true;
+    return { can_access: true };
   }
 
-  // TEMPORARY ONLY
-  access_list = blob_access_list.get(blob_info.blob_uuid);
-  if (access_list != undefined && access_list.includes(wallet_address)) {
-    return true;
+  access_list = blob_access_list.get(wallet_address);
+  if (access_list != undefined && access_list.includes(blob_uuid)) {
+    return { can_access: true };
   }
-  
-  return false;
+
+  return { can_access: false, denied_access_reason: 'No permission to access Blob' };
 }
 
 export async function add_unverified_blob(_blob_info) {
   const { blob_uuid, file, file_name, owner} = _blob_info;
 
   const blob_name = randomUUID();
+  const expires_at = Date.now() + 1000 * 60 * 20 // 20 min from creation
 
   // upload file
   fs.writeFileSync(path.join(__dirname, `blobs/${blob_name}`), fs.readFileSync(file.path))
@@ -65,9 +53,9 @@ export async function add_unverified_blob(_blob_info) {
     file_name,
     verification_status: 'unverified',
     owner,
-    blob_name
+    blob_name,
+    expires_at
   };
 
-  // TEMPORARY ONLY
   blob_infos.set(blob_uuid, blob_info);
 }

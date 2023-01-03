@@ -116,6 +116,4 @@ $('#submit_btn').click(async () => {
     $('#no_confirmations').val(i);
     await transaction_response.wait(i+1);
   }
-  
-
 });
