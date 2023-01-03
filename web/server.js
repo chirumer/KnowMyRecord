@@ -293,19 +293,23 @@ app.get('/new_patient_record_details', hospital_route, (req, res) => {
   const blob_info = get_blob_info(blob_uuid);
 
   if (blob_uuid == undefined) {
-    res.status(404).render('error_page', { username, error_msg: `Badly formed url` });
+    res.status(404).render('error_page', { username, error_msg: `Badly formed url.` });
     return;
   }
   if (blob_info == undefined) {
-    res.status(404).render('error_page', { username, error_msg: `Blob ${blob_uuid} does not exist` });
+    res.status(404).render('error_page', { username, error_msg: `Blob ${blob_uuid} does not exist.` });
     return;
   }
   else if (blob_info.owner != wallet_address) {
-    res.status(404).render('error_page', { username, error_msg: `You do not own the Blob ${blob_uuid} `});
+    res.status(404).render('error_page', { username, error_msg: `You do not own the Blob ${blob_uuid}.` });
     return;
   }
   else if (Date.now() >= blob_info.expires_at) {
-    res.status(404).render('error_page', { username, error_msg: `Blob ${blob_uuid} has timed out` })
+    res.status(404).render('error_page', { username, error_msg: `Blob ${blob_uuid} has timed out.` })
+    return;
+  }
+  else if (blob_info.verification_status != 'pending') {
+    res.status(404).render('error_page', { username, error_msg: `Blob ${blob_uuid} is not pending.` })
     return;
   }
 

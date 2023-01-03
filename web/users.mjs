@@ -68,3 +68,14 @@ export function get_unverified_users() {
 
   return unverified_users;
 }
+
+export const user_activity = new Map();
+
+export function add_to_user_activity(wallet_address, activity) {
+  const user_activity = get_user_activity(wallet_address);
+  return user_activity.push(activity);
+}
+
+export function get_user_activity(wallet_address) {
+  return user_activity.get(wallet_address) ?? [];
+}
