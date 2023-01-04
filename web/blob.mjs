@@ -41,7 +41,7 @@ export function blob_access(wallet_address, blob_uuid) {
 }
 
 export async function add_unverified_blob(_blob_info) {
-  const { blob_uuid, file, file_name, owner} = _blob_info;
+  const { blob_uuid, file, file_name, owner, description } = _blob_info;
 
   const blob_name = randomUUID();
   const expires_at = Date.now() + 1000 * 60 * 20 // 20 min from creation
@@ -51,6 +51,7 @@ export async function add_unverified_blob(_blob_info) {
 
   const blob_info = { 
     file_name,
+    description,
     verification_status: 'unverified',
     owner,
     blob_name,

@@ -1,5 +1,8 @@
 const users = new Map();
 
+// default admin
+add_user('0x0000000000000000000000000000000000000000', { authorization_status: 'authorized', user_type: 'admin', name: 'Default Admin' });
+
 // TEMPORARY ONLY
 add_user('0x5f3a14d4e21e74455945f26a34a852151a87efa8', { authorization_status: 'authorized', user_type: 'admin', name: 'Admin User' });
 add_user('0xcd5ffc1a56244f9b21a72cd6cd73adba90e8b490', { authorization_status: 'authorized', user_type: 'patient', name: 'Dan Arnin', aadhaar: '567435356343' });
@@ -53,16 +56,4 @@ export function get_unverified_users() {
   });
 
   return unverified_users;
-}
-
-const user_activity = new Map();
-
-export function add_to_user_activity(wallet_address, activity) {
-  const activities = get_user_activity(wallet_address);
-  activities.push(activity);
-  user_activity.set(wallet_address, activities)
-}
-
-export function get_user_activity(wallet_address) {
-  return user_activity.get(wallet_address) ?? [];
 }

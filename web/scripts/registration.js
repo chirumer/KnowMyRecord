@@ -1,5 +1,5 @@
 $('#register_btn').click(async () => {
-  $('#authorize_btn').prop('disabled', true);
+  $('#register_btn').prop('disabled', true);
 
   const user_type = $('.active').attr('id');
   const user_details = { user_type };
@@ -21,7 +21,7 @@ $('#register_btn').click(async () => {
     $(location).prop('href', '/');
   }
   else {
-    $('#authorize_btn').prop('disabled', false);
+    $('#register_btn').prop('disabled', false);
     alert('Could Not Connect');
   }
 });

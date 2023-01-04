@@ -25,7 +25,6 @@ import fs from 'fs'
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import jwt from 'jsonwebtoken';
-import http from 'http';
 import url from 'url';
 import formidableMiddleware from 'express-formidable';
 
@@ -34,22 +33,21 @@ import { recoverTypedSignature } from '@metamask/eth-sig-util';
 
 import { wallet_address_from_token } from './user_identification.mjs'
 import { get_user, add_user, get_username, change_authorization_status,
-          get_patient_with_aadhaar, 
-          get_user_activity} from './users.mjs'
+          get_patient_with_aadhaar } from './users.mjs'
 import { authorize, patient_route, hospital_route, admin_route } from './user_identification.mjs'
-import { get_unverified_users } from './users.mjs'
+import { get_unverified_users,  } from './users.mjs'
 import { nonces } from './user_identification.mjs';
 import { get_blob_info, blob_access, add_unverified_blob } from './blob.mjs';
 import { randomUUID } from 'crypto'
-import { WebSocketServer } from 'ws';
 import { contract_addresses, contract_abis } from './contract_infos.mjs';
+import { init_sockets, update_user_verification_sockets } from './sockets.mjs';
 
 import {} from './contract_listeners.mjs';
 
 
 
 const app = express();
-const server = http.createServer(app);
+const server = init_sockets(app);
 
 
 // express middleware
@@ -64,95 +62,6 @@ app.use(formidableMiddleware({
 
 // js modules
 app.use('/node_modules/ethers', express.static(__dirname + '/node_modules/ethers/dist'));
-
-const user_verification_sockets = new Set();
-const activity_sockets = new Map();
-
-const user_verification_ws_server = new WebSocketServer({ noServer: true, path: '/verify_new_users' });
-user_verification_ws_server.on('connection', socket => {
-
-  user_verification_sockets.add(socket);
-
-  socket.on('message', message => {
-    const { type, data } = JSON.parse(message);
-
-    if (type == 'user_verification_response') {
-
-      const { wallet_address, new_authorization_status } = data;
-      change_authorization_status(wallet_address, new_authorization_status);
-
-      const { request_no } = data;
-      socket.send(JSON.stringify({ type: 'response_received', data: { request_no } }));
-    }
-  });
-
-  socket.on('close', () => {
-    user_verification_sockets.delete(socket);
-  });
-
-  const unverified_users = get_unverified_users();
-  unverified_users.forEach(user => {
-
-    const send_data = {
-      type: 'user_verification_request',
-      data: user
-    }
-
-    socket.send(JSON.stringify(send_data));
-  });
-});
-
-const activity_ws_server = new WebSocketServer({ noServer: true, path: '/activity' });
-activity_ws_server.on('connection', socket => {
-
-  socket.on('close', () => {
-    activity_sockets.delete(socket);
-  }); 
-
-  const activities = get_user_activity(activity_sockets.get(socket));
-  activities.forEach(activity => {
-
-    const send_data = {
-      type: 'activity',
-      data: activity
-    }
-
-    socket.send(JSON.stringify(send_data));
-  });
-});
-
-
-server.on('upgrade', (request, socket, head) => {
-  const pathname = request.url;
-
-  // parse cookies
-  let cookies;
-  const { headers: { cookie } } = request;
-  if (cookie) {
-    cookies = cookie.split(';').reduce((res, item) => {
-      const data = item.trim().split('=');
-      return { ...res, [data[0]]: data[1] };
-    }, {});
-  }
-
-  const wallet_address = wallet_address_from_token(cookies['access_token']);
-  const user_type = get_user(wallet_address).user_type;
-
-  if (pathname == '/verify_new_users' && user_type == 'admin') {
-    user_verification_ws_server.handleUpgrade(request, socket, head, socket => {
-      user_verification_ws_server.emit('connection', socket, request);
-    });
-  }
-  else if (pathname == '/activity') {
-    activity_ws_server.handleUpgrade(request, socket, head, socket => {
-      activity_sockets.set(socket, wallet_address);
-      activity_ws_server.emit('connection', socket, request);
-    });
-  }
-  else {
-    socket.destroy();
-  }
-});
 
 
 // home route
@@ -192,6 +101,30 @@ app.get('/connect/external_wallet', (req, res) => {
   res.render('external_wallet');
 });
 
+// no wallet connection
+app.get('/connect/no_wallet', (req, res) => {
+  res.render('no_wallet');
+});
+
+app.post('/connect/no_wallet', (req, res) => {
+  const { username, password } = req.fields;
+
+  // default admin
+  if (username == 'admin' && password == 'gadmin123') {
+
+    const wallet_address = '0x0000000000000000000000000000000000000000';
+    const jwt_token = jwt.sign({ wallet_address }, process.env.TOKEN_SECRET);
+    res.cookie(
+      'access_token',
+      jwt_token, 
+      { httpOnly: true, secure: process.env.NODE_ENV !== 'DEVELOPMENT' }
+    ).status(200).end();
+    return;
+  }
+
+  res.status(404).json({ failure_reason: 'Incorrect username or password.' });
+});
+
 // authorize page
 app.get('/authorize', (req, res) => {
   res.render('authorize');
@@ -213,6 +146,13 @@ app.get('/wallet_address', authorize, (req, res) => {
   res.json({ wallet_address });
 });
 
+app.get('/edit_profile', authorize, (req, res) => {
+  const wallet_address = req.wallet_address;
+  const { authorization_status, user_type, ...details} = get_user(wallet_address);
+  const username = details.name;
+  res.render('edit_profile', { username, wallet_address, details });
+});
+
 // register a new user
 app.post('/register', authorize, (req, res) => {
   if (get_user(req.wallet_address)) {
@@ -228,15 +168,7 @@ app.post('/register', authorize, (req, res) => {
     ...user_details
   };
   add_user(req.wallet_address, new_user);
-
-  user_verification_sockets.forEach(socket => {
-    const send_data = {
-      type: 'user_verification_request',
-      data: new_user
-    }
-
-    socket.send(JSON.stringify(send_data));
-  });
+  update_user_verification_sockets(new_user);
 
   res.status(200).end();
 });
@@ -322,11 +254,11 @@ app.post('/upload_patient_record', hospital_route, (req, res) => {
   const blob_uuid = random_16bytes_hex();
 
   const file = req.files.file;
-  const { file_name } = req.fields;
+  const { file_name, description } = req.fields;
   const owner = req.wallet_address;
 
   // async call
-  add_unverified_blob({ blob_uuid, file, file_name, owner });
+  add_unverified_blob({ blob_uuid, file, file_name, owner, description });
 
   res.json({ blob_uuid });
 });
@@ -362,6 +294,11 @@ app.get('/new_patient_record_details', hospital_route, (req, res) => {
 
   const { file_name } = blob_info;
   res.render('new_patient_record', { username, wallet_address, blob_uuid, file_name })
+});
+
+app.get('/authorize_hospital_requests', patient_route, (req, res) => {
+  const username = get_username(req.wallet_address);
+  res.render('authorize_hospital_requests', { username });
 });
 
 app.get('/blob', authorize, (req, res) => {

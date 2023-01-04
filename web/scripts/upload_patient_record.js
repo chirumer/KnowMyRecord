@@ -8,9 +8,16 @@ $('#whole_file_upload_btn').click(async () => {
     $('#whole_file_upload_btn').prop('disabled', false);
     return;
   }
+  const description = $('#description').val();
+  if (description.length == 0) {
+    alert('no description specified');
+    $('#whole_file_upload_btn').prop('disabled', false);
+    return;
+  }
   const file = $('#file_input')[0].files[0]
   form_data.append('file', file);
   form_data.append('file_name', file.name);
+  form_data.append('description', description);
 
   const response = await fetch('/upload_patient_record', {
     method: 'POST',
