@@ -36,6 +36,33 @@ const blob_uuid = url_params.get('blob_uuid');
 $('#submit_btn').click(async () => {
   $('#submit_btn').prop('disabled', true);
 
+  if ($('#description').val().length == 0) {
+    alert('Please Specify Record Type');
+    $('#submit_btn').prop('disabled', false);
+    return;
+  }
+
+  const record_details = { blob_uuid };
+  $('.user_data:visible').each(function() {
+    const ele = $(this);
+    record_details[ele.attr('id')] = ele.val();
+  })
+
+  const response = await fetch('/new_patient_record_details', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(record_details),
+  });
+
+  if (!response.ok) {
+    const { failure_reason } = await response.json();
+    alert(failure_reason);
+    $('#submit_btn').prop('disabled', false);
+    return;
+  }
+
   const { wallet_address } = await (await fetch('/wallet_address')).json()
   const signer_address = (await signer.getAddress()).toLowerCase();
   if (wallet_address != signer_address) {

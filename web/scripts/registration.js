@@ -15,7 +15,7 @@ $('#register_btn').click(async () => {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(user_details),
-  })
+  });
 
   if (response.ok) {
     $(location).prop('href', '/');

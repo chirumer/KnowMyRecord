@@ -6,7 +6,7 @@ import ethers from 'ethers';
 import { contract_abis, contract_addresses } from './contract_infos.mjs';
 import { verify_blob } from './blob.mjs';
 import { get_user  } from './users.mjs';
-import { add_to_user_activity } from './contract_activity.mjs';
+import { add_to_user_activity, add_pending_addition_request } from './contract_activity.mjs';
 
 
 const provider = new ethers.providers.WebSocketProvider(
@@ -18,7 +18,7 @@ addition_contract.on('RequestAddition', (patient, hospital, blob_id, blob_checks
 
   patient = patient.toLowerCase();
   hospital = hospital.toLowerCase();
-  req_id = req_id.number;
+  req_id = req_id.toNumber();
 
   add_to_user_activity(hospital, { 
     event: 'Record Addition Request',

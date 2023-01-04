@@ -41,6 +41,16 @@ export function get_patient_with_aadhaar(patient_aadhaar) {
   return null;
 }
 
+export function get_hospital_with_hin(hospital_hin) {
+
+  for (const [wallet_address, user_info] of users) {
+    if (user_info.hin == hospital_hin) {
+      return wallet_address
+    }
+  }
+  return null;
+}
+
 export function get_unverified_users() {
 
   const unverified_users = [];

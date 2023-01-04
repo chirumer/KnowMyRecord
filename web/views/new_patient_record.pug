@@ -35,5 +35,10 @@ html
             .col.m-2.align-items-center
               input.user_data#patient_aadhaar.form-control(type='text' placeholder='12 digit number')
 
+          .form-group.row
+            label.m-2.col.col-form-label(for='patient_aadhaar') Record Type
+            .col.m-2.align-items-center
+              input.user_data#description.form-control(type='text' placeholder='Record Description')
+
         div(class='text-center')
           button(id='submit_btn' type='button' class='btn btn-primary m-2') Submit

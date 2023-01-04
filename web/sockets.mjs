@@ -1,6 +1,6 @@
 import { WebSocketServer } from 'ws';
 import http from 'http';
-import { get_user_activity } from './contract_activity.mjs';
+import { get_user_activity, get_pending_addition_requests } from './contract_activity.mjs';
 import { wallet_address_from_token } from './user_identification.mjs';
 import { get_user } from './users.mjs';
 
@@ -33,6 +33,13 @@ export function init_sockets(app) {
         activity_sockets.set(socket, wallet_address);
         activity_addresses.set(wallet_address, socket);
         activity_ws_server.emit('connection', socket, request);
+      });
+    }
+    else if (pathname == '/authorize_hospital_requests' && user_type == 'patient') {
+      hospital_authorization_ws_server.handleUpgrade(request, socket, head, socket => {
+        hospital_authorization_sockets.set(socket, wallet_address);
+        hospital_authorization_addresses.set(wallet_address, socket);
+        hospital_authorization_ws_server.emit('connection', socket, request);
       });
     }
     else {
@@ -68,11 +75,22 @@ export function update_user_activity_socket(wallet_address, activity) {
   socket.send(JSON.stringify(send_data));
 }
 
+export function update_hospital_authorization_socket(wallet_address, request_data) {
+  const socket = hospital_authorization_addresses.get(wallet_address);
+  if (socket == undefined) {
+    // socket not active
+    return;
+  }
+
+  const send_data = {
+    type: 'hospital_authorization_request',
+    data: request_data
+  };
+  socket.send(JSON.stringify(send_data)); 
+}
+
 
 const user_verification_sockets = new Set();
-const activity_sockets = new Map();
-const activity_addresses = new Map();
-
 
 const user_verification_ws_server = new WebSocketServer({ noServer: true, path: '/verify_new_users' });
 user_verification_ws_server.on('connection', socket => {
@@ -108,6 +126,10 @@ user_verification_ws_server.on('connection', socket => {
   });
 });
 
+
+const activity_sockets = new Map();
+const activity_addresses = new Map();
+
 const activity_ws_server = new WebSocketServer({ noServer: true, path: '/activity' });
 activity_ws_server.on('connection', socket => {
 
@@ -122,6 +144,30 @@ activity_ws_server.on('connection', socket => {
     const send_data = {
       type: 'activity',
       data: activity
+    }
+
+    socket.send(JSON.stringify(send_data));
+  });
+});
+
+
+const hospital_authorization_sockets = new Map();
+const hospital_authorization_addresses = new Map();
+
+const hospital_authorization_ws_server = new WebSocketServer({ noServer: true, path: '/authorize_hospital_requests' });
+hospital_authorization_ws_server.on('connection', socket => {
+
+  socket.on('close', () => {
+    hospital_authorization_addresses.delete(hospital_authorization_sockets.get(socket));
+    hospital_authorization_sockets.delete(socket);
+  }); 
+
+  const authorization_requests = get_pending_addition_requests(hospital_authorization_sockets.get(socket));
+  authorization_requests.forEach(request_data => {
+
+    const send_data = {
+      type: 'hospital_authorization_request',
+      data: request_data
     }
 
     socket.send(JSON.stringify(send_data));

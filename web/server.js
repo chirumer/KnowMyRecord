@@ -33,7 +33,7 @@ import { recoverTypedSignature } from '@metamask/eth-sig-util';
 
 import { wallet_address_from_token } from './user_identification.mjs'
 import { get_user, add_user, get_username, change_authorization_status,
-          get_patient_with_aadhaar } from './users.mjs'
+          get_patient_with_aadhaar, get_hospital_with_hin } from './users.mjs'
 import { authorize, patient_route, hospital_route, admin_route } from './user_identification.mjs'
 import { get_unverified_users,  } from './users.mjs'
 import { nonces } from './user_identification.mjs';
@@ -254,11 +254,11 @@ app.post('/upload_patient_record', hospital_route, (req, res) => {
   const blob_uuid = random_16bytes_hex();
 
   const file = req.files.file;
-  const { file_name, description } = req.fields;
+  const { file_name } = req.fields;
   const owner = req.wallet_address;
 
   // async call
-  add_unverified_blob({ blob_uuid, file, file_name, owner, description });
+  add_unverified_blob({ blob_uuid, file, file_name, owner });
 
   res.json({ blob_uuid });
 });
@@ -296,9 +296,53 @@ app.get('/new_patient_record_details', hospital_route, (req, res) => {
   res.render('new_patient_record', { username, wallet_address, blob_uuid, file_name })
 });
 
+app.post('/new_patient_record_details', hospital_route, (req, res) => {
+
+  const { blob_uuid, patient_aadhaar, ...details } = req.fields;
+  const wallet_address = req.wallet_address;
+
+  const patient = get_patient_with_aadhaar(patient_aadhaar);
+  if (patient == null) {
+    res.status(404).json({ failure_reason: `No Patient With Aadhaar (${patient_aadhaar})` });
+    return;
+  }
+  const record_details = { patient, ...details };
+
+  const blob_info = get_blob_info(blob_uuid);
+  if (blob_info == null) {
+    res.status(404).json({ failure_reason: `No Blob With blob_uuid (${blob_uuid})` });
+    return;
+  }
+  else if (blob_info.owner != wallet_address) {
+    res.status(404).json({ failure_reason: `You do not own the Blob ${blob_uuid}.` });
+    return;
+  }
+  else if (Date.now() >= blob_info.expires_at) {
+    res.status(404).json({ failure_reason: `Blob ${blob_uuid} has timed out.` });
+    return;
+  }
+  else if (blob_info.verification_status != 'unverified') {
+    res.status(404).json({ failure_reason: `Blob ${blob_uuid} is not pending.` });
+    return;
+  }
+
+  for (const [key, value] of Object.entries(record_details)) {
+    blob_info[key] = value;
+  }
+
+  console.log(get_blob_info(blob_uuid));
+
+  res.status(200).end();
+});
+
 app.get('/authorize_hospital_requests', patient_route, (req, res) => {
   const username = get_username(req.wallet_address);
   res.render('authorize_hospital_requests', { username });
+});
+
+app.get('/authorize_hospital_requests/response', patient_route, (req, res) => {
+  const username = get_username(req.wallet_address);
+  res.render('record_addition_response', { username });
 });
 
 app.get('/blob', authorize, (req, res) => {
@@ -313,18 +357,6 @@ app.get('/blob', authorize, (req, res) => {
 
   const blob_info = get_blob_info(blob_uuid);
   res.attachment(blob_info.file_name).sendFile(path.join(__dirname, `blobs/${blob_info.blob_name}`)); 
-});
-
-app.get('/get_patient', (req, res) => {
-  const { patient_aadhaar } = req.query;
-  
-  const wallet_address = get_patient_with_aadhaar(patient_aadhaar);
-
-  if (wallet_address == null) {
-    res.status(404).json({ error_reason: `No Patient With Aadhaar (${patient_aadhaar})` });
-    return;
-  }
-  res.json({ wallet_address });
 });
 
 app.get('/contract_address', (req, res) => {
@@ -364,6 +396,30 @@ app.get('/get_checksum', (req, res) => {
   const checksum = calculate_checksum(file_data);
 
   res.json({ checksum });
+});
+
+app.get('/get_patient', (req, res) => {
+  const { patient_aadhaar } = req.query;
+  
+  const wallet_address = get_patient_with_aadhaar(patient_aadhaar);
+
+  if (wallet_address == null) {
+    res.status(404).json({ error_reason: `No Patient With Aadhaar (${patient_aadhaar})` });
+    return;
+  }
+  res.json({ wallet_address });
+});
+
+app.get('/get_hospital', (req, res) => {
+  const { hospital_hin } = req.query;
+  
+  const wallet_address = get_hospital_with_hin(hospital_hin);
+
+  if (wallet_address == null) {
+    res.status(404).json({ error_reason: `No Hospital With HIN (${hospital_hin})` });
+    return;
+  }
+  res.json({ wallet_address });
 });
 
 app.get('/partials/confirmation_tracking', authorize, (req, res) => {
