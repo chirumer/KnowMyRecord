@@ -154,6 +154,28 @@ app.get('/edit_profile', authorize, (req, res) => {
   res.render('edit_profile', { username, wallet_address, details });
 });
 
+app.post('/edit_profile', authorize, (req, res) => {
+  const wallet_address = req.wallet_address;
+  const user_details = req.fields;
+
+  const user = get_user(wallet_address);
+
+  // check fields exist
+  for (const [key, value] of Object.entries(user_details)) {
+    if (!(key in user)) {
+      res.status(400).json({ failure_reason: `non-existent field (${key})` });
+      return;
+    }
+  }
+
+  // change fields
+  for (const [key, value] of Object.entries(user_details)) {
+    user[key] = value;
+  }
+
+  res.status(200).end();
+});
+
 // register a new user
 app.post('/register', authorize, (req, res) => {
   if (get_user(req.wallet_address)) {

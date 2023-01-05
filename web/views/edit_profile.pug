@@ -3,7 +3,7 @@
 html
   head
     include ../partials/head.pug 
-    script(defer type='text/javascript' src='/edit_profile.js')
+    script(defer type='text/javascript' src='/scripts/edit_profile.js')
 
   body(class='h-100 d-flex flex-column') 
     include ../partials/authorized_appbar.pug
@@ -17,7 +17,7 @@ html
       .form-group.row
         label.m-2.col.col-form-label(for='wallet_address') Wallet Address
         .col.m-2.align-items-center
-          input.user_data#wallet_address.form-control-plaintext(type='text' readonly='' value=wallet_address)
+          input#wallet_address.form-control-plaintext(type='text' readonly='' value=wallet_address)
 
       #myTabContent.tab-content
 
