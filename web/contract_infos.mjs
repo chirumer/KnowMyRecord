@@ -90,10 +90,88 @@ const addition_contract_abi = (
 ]`
 );
 
+const view_contract_address = '0x3b277a5079eB2408481b10Ec570f75Ab695F7981';
+const view_contract_abi = (
+`[
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "patient",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "hospital",
+				"type": "address"
+			}
+		],
+		"name": "RequestGranted",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "patient",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "hospital",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "req_id",
+				"type": "uint256"
+			}
+		],
+		"name": "RequestView",
+		"type": "event"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_patient",
+				"type": "address"
+			}
+		],
+		"name": "Request",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "req_id",
+				"type": "uint256"
+			}
+		],
+		"name": "grantRequest",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	}
+]`
+);
+
 export const contract_addresses = {
-  addition_contract: addition_contract_address
+  addition_contract: addition_contract_address,
+  view_contract: view_contract_address
 }
 
 export const contract_abis = {
-  addition_contract: addition_contract_abi
+  addition_contract: addition_contract_abi,
+  view_contract: view_contract_abi
 }

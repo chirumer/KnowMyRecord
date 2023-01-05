@@ -114,8 +114,8 @@ $('#submit_btn').click(async () => {
       const response = 
       await addition_contract.Request(
        patient_wallet_address,
-       '0x' + blob_uuid,
-       '0x' + checksum
+       blob_uuid,
+       checksum
       );
      return response;
 

@@ -20,7 +20,7 @@ export function random_uint32() {
 }
 
 export function random_16bytes_hex() {
-  return crypto.randomBytes(16).toString('hex');
+  return '0x' + crypto.randomBytes(16).toString('hex');
 }
 
 export function create_directory_if_not_exist(_path) {
@@ -32,7 +32,7 @@ export function create_directory_if_not_exist(_path) {
 }
 
 export function calculate_checksum(str, algorithm, encoding) {
-  return crypto
+  return '0x' + crypto
     .createHash(algorithm || 'md5')
     .update(str, 'utf8')
     .digest(encoding || 'hex')

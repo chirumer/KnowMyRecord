@@ -2,6 +2,8 @@ $('#back_btn').click(() => {
   window.history.back();
 });
 
+let id_counter = 0;
+
 
 function connect_to_websocket() {
   hospital_authorization_ws = new WebSocket(hospital_authorization_ws_url);
@@ -27,10 +29,10 @@ function connect_to_websocket() {
   
   hospital_authorization_ws.addEventListener('message', (event) => {
     const { type, data } = JSON.parse(event.data);
-
-    console.log(data);
   
     if (type == 'hospital_authorization_request') {
+      const { request, ...request_data } = data;
+      const id = id_counter++;
   
       const request_ele = (
         $('<div/>')
@@ -39,7 +41,9 @@ function connect_to_websocket() {
             $('<div/>')
               .addClass('card m-3 p-2')
               .append(
-                  Object.entries(data).map(([key, value]) => {
+                  $('<b/>')
+                   .text(`${'request description'}: ${request}`),
+                  Object.entries(request_data).map(([key, value]) => {
                     return (
                       $('<div/>')
                         .text(`${key}: ${value}`)
@@ -55,13 +59,13 @@ function connect_to_websocket() {
                         .text('Authorize')
                         .addClass('btn btn-success m-2')
                         .click(function() {
-                          $(location).prop('href', '/authorize_hospital_requests/response?' + new URLSearchParams({ req_id: data.req_id, action: 'authorize' }));
+                          $(location).prop('href', '/authorize_hospital_requests/response?' + new URLSearchParams({ id, action: 'authorize' }));
                         }),
                       $('<button/>')
                         .text('Reject')         
                         .addClass('btn btn-danger m-2')
                         .click(function() {
-                          $(location).prop('href', '/authorize_hospital_requests/response?' + new URLSearchParams({ req_id: data.req_id, action: 'reject' }));
+                          $(location).prop('href', '/authorize_hospital_requests/response?' + new URLSearchParams({ id, action: 'reject' }));
                         })    
                     )
               )

@@ -1,6 +1,6 @@
 import { WebSocketServer } from 'ws';
 import http from 'http';
-import { get_user_activity, get_pending_addition_requests } from './contract_activity.mjs';
+import { get_user_activity, get_pending_requests } from './contract_activity.mjs';
 import { wallet_address_from_token } from './user_identification.mjs';
 import { get_user } from './users.mjs';
 
@@ -82,9 +82,11 @@ export function update_hospital_authorization_socket(wallet_address, request_dat
     return;
   }
 
+  const { request_type, ...data } = request_data;
+
   const send_data = {
     type: 'hospital_authorization_request',
-    data: request_data
+    data
   };
   socket.send(JSON.stringify(send_data)); 
 }
@@ -162,13 +164,15 @@ hospital_authorization_ws_server.on('connection', socket => {
     hospital_authorization_sockets.delete(socket);
   }); 
 
-  const authorization_requests = get_pending_addition_requests(hospital_authorization_sockets.get(socket));
+  const authorization_requests = get_pending_requests(hospital_authorization_sockets.get(socket));
   authorization_requests.forEach(request_data => {
+
+    const { request_type, ...data } = request_data;
 
     const send_data = {
       type: 'hospital_authorization_request',
-      data: request_data
-    }
+      data
+    };
 
     socket.send(JSON.stringify(send_data));
   });

@@ -43,6 +43,7 @@ import { contract_addresses, contract_abis } from './contract_infos.mjs';
 import { init_sockets, update_user_verification_sockets } from './sockets.mjs';
 
 import {} from './contract_listeners.mjs';
+import { get_pending_requests, close_pending_requests } from './contract_activity.mjs';
 
 
 
@@ -330,8 +331,6 @@ app.post('/new_patient_record_details', hospital_route, (req, res) => {
     blob_info[key] = value;
   }
 
-  console.log(get_blob_info(blob_uuid));
-
   res.status(200).end();
 });
 
@@ -341,8 +340,35 @@ app.get('/authorize_hospital_requests', patient_route, (req, res) => {
 });
 
 app.get('/authorize_hospital_requests/response', patient_route, (req, res) => {
-  const username = get_username(req.wallet_address);
-  res.render('record_addition_response', { username });
+  const wallet_address = req.wallet_address;
+  const username = get_username(wallet_address);
+  const { action } = req.query;
+  const id = parseInt(req.query.id);
+
+  const pending_requests = get_pending_requests(wallet_address);
+  if (isNaN(id) || id >= pending_requests.length || id < 0) {
+    res.status(400).json({ error: 'invalid id' });
+    return;
+  }
+
+  const request = pending_requests[id];
+  const { request_type, ...request_details } = request;
+
+  res.render('request_response', { username, request_type, action, request_details });
+});
+
+app.post('/authorize_hospital_requests/response', patient_route, (req, res) => {
+  const wallet_address = req.wallet_address;
+  const { id } = req.fields;
+
+  const pending_requests = get_pending_requests(wallet_address);
+  if (id >= pending_requests.length || id < 0) {
+    res.status(400).json({ failure_reason: 'invalid id' });
+    return;
+  }
+  close_pending_requests(wallet_address, id);
+
+  res.status(200).end();
 });
 
 app.get('/blob', authorize, (req, res) => {
@@ -352,7 +378,7 @@ app.get('/blob', authorize, (req, res) => {
   const access_info = blob_access(wallet_address, blob_uuid);
   if (!access_info.can_access) {
     res.status(404).end();
-      return;
+    return;
   }
 
   const blob_info = get_blob_info(blob_uuid);
@@ -424,6 +450,10 @@ app.get('/get_hospital', (req, res) => {
 
 app.get('/partials/confirmation_tracking', authorize, (req, res) => {
   res.render('../partials/confirmation_tracking');
+});
+
+app.get('/partials/response_confirmation', authorize, (req, res) => {
+  res.render('../partials/response_confirmation');
 });
 
 
