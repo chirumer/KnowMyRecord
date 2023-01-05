@@ -31,3 +31,14 @@ export function close_pending_requests(wallet_address, index) {
   pending.splice(index, 1);
   pending_requests.set(wallet_address, pending);
 }
+
+export function close_pending_requests_by_blob_id(wallet_address, blob_uuid) {
+  const pending = pending_requests.get(wallet_address);
+  for (const [index, request] of pending.entries()) {
+    if (request.blob_id == blob_uuid) {
+      pending.splice(index, 1);
+      return;
+    }
+  }
+  pending_requests.set(wallet_address, pending);
+}

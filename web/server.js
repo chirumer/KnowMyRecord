@@ -37,7 +37,7 @@ import { get_user, add_user, get_username, change_authorization_status,
 import { authorize, patient_route, hospital_route, admin_route } from './user_identification.mjs'
 import { get_unverified_users,  } from './users.mjs'
 import { nonces } from './user_identification.mjs';
-import { get_blob_info, blob_access, add_unverified_blob } from './blob.mjs';
+import { get_blob_info, get_verified_blobs, blob_access, add_unverified_blob } from './blob.mjs';
 import { randomUUID } from 'crypto'
 import { contract_addresses, contract_abis } from './contract_infos.mjs';
 import { init_sockets, update_user_verification_sockets } from './sockets.mjs';
@@ -391,6 +391,30 @@ app.post('/authorize_hospital_requests/response', patient_route, (req, res) => {
   close_pending_requests(wallet_address, id);
 
   res.status(200).end();
+});
+
+app.get('/past_data', patient_route, (req, res) => {
+  const wallet_address = req.wallet_address;
+  const username = get_username(req.wallet_address);
+
+  const blob_uuids = get_verified_blobs(wallet_address);
+
+  const blobs = {}
+  blob_uuids.forEach(blob_uuid => {
+    const blob_info = get_blob_info(blob_uuid);
+
+    const hospital_name = get_user(blob_info.owner).name;
+    const { description } = blob_info;
+    const time = (new Date(blob_info.timestamp)).toLocaleString();
+
+    blobs[blob_uuid] = {
+      description,
+      hospital_name,
+      time
+    };
+  });
+
+  res.render('past_data', { username, blobs });
 });
 
 app.get('/blob', authorize, (req, res) => {

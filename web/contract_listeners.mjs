@@ -4,9 +4,9 @@ dotenv.config()
 
 import ethers from 'ethers';
 import { contract_abis, contract_addresses } from './contract_infos.mjs';
-import { verify_blob } from './blob.mjs';
+import { verify_blob, update_blob_timestamp } from './blob.mjs';
 import { get_user  } from './users.mjs';
-import { add_to_user_activity, add_pending_request } from './contract_activity.mjs';
+import { add_to_user_activity, add_pending_request, close_pending_requests_by_blob_id } from './contract_activity.mjs';
 
 
 const provider = new ethers.providers.WebSocketProvider(
@@ -56,8 +56,9 @@ addition_contract.on('RequestAddition', (patient, hospital, blob_id, blob_checks
 addition_contract.on('RequestGranted', blob_id => {
 
   verify_blob(blob_id);
-
   const timestamp = Date.now();
+  update_blob_timestamp(blob_id, timestamp);
+
   const { patient, hospital } = blob_infos.get(blob_id);
 
   add_to_user_activity(hospital, { 
@@ -71,4 +72,6 @@ addition_contract.on('RequestGranted', blob_id => {
     timestamp,
     blob_id
   });
+
+  close_pending_requests_by_blob_id(patient, blob_id);
 });

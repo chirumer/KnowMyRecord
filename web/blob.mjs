@@ -64,3 +64,21 @@ export async function add_unverified_blob(_blob_info) {
 export function verify_blob(blob_uuid) {
   blob_infos.get(blob_uuid).verification_status = 'verified';
 }
+
+export function update_blob_timestamp(blob_uuid, timestamp) {
+  blob_infos.get(blob_uuid).timestamp = timestamp;
+}
+
+export function get_verified_blobs(wallet_address) {
+
+  const verified_blobs = [];
+
+  for (const [blob_uuid, blob_info] of blob_infos) {
+    if (blob_info.patient == wallet_address && blob_info.verification_status == 'verified') {
+
+      verified_blobs.push(blob_uuid);
+    }
+  }
+
+  return verified_blobs;
+}
