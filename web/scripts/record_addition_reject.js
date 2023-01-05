@@ -1,5 +1,3 @@
-import { ethers } from "/node_modules/ethers/ethers.esm.js";
-
 const url_params = new URLSearchParams(location.search);
 const id = url_params.get('id');
 

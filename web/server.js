@@ -42,7 +42,7 @@ import { randomUUID } from 'crypto'
 import { contract_addresses, contract_abis } from './contract_infos.mjs';
 import { init_sockets, update_user_verification_sockets } from './sockets.mjs';
 
-import {} from './contract_listeners.mjs';
+import { get_accessible_patients } from './contract_listeners.mjs';
 import { get_pending_requests, close_pending_requests } from './contract_activity.mjs';
 
 
@@ -354,6 +354,54 @@ app.post('/new_patient_record_details', hospital_route, (req, res) => {
   }
 
   res.status(200).end();
+});
+
+app.get('/patient_past_data', hospital_route, (req, res) => {
+  const username = get_username(req.wallet_address);
+  res.render('patient_past_data', { username });
+});
+
+app.get('/patient_past_data/request', hospital_route, (req, res) => {
+  const username = get_username(req.wallet_address);
+  
+  res.render('request_patient_past_data', { username });
+});
+
+app.get('/patient_past_data/view', hospital_route, (req, res) => {
+  const wallet_address = req.wallet_address;
+  const username = get_username(req.wallet_address);
+  
+  if (!req.query?.patient) {
+    const patients = get_accessible_patients(wallet_address);
+    const patient_infos = patients.map(wallet_address => {
+      const aadhaar = get_user(wallet_address).aadhaar;
+      return { aadhaar, wallet_address };
+    });
+
+    res.render('accessible_patients', { username, patient_infos });
+  }
+  else {
+    const patient = req.query.patient;
+    const blob_uuids = get_verified_blobs(patient);
+  
+    const blobs = {}
+    blob_uuids.forEach(blob_uuid => {
+      const blob_info = get_blob_info(blob_uuid);
+  
+      const hospital_name = get_user(blob_info.owner).name;
+      const { description } = blob_info;
+      const time = (new Date(blob_info.timestamp)).toLocaleString();
+
+      if (blob_access(wallet_address, blob_uuid).can_access) {
+        blobs[blob_uuid] = {
+          description,
+          hospital_name,
+          time
+        };
+      }
+    });
+    res.render('past_data', { username, blobs });
+  }
 });
 
 app.get('/authorize_hospital_requests', patient_route, (req, res) => {

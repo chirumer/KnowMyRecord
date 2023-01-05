@@ -86,7 +86,7 @@ function connect_to_websocket() {
       request_elements.set(local_request_no, request_ele);
       request_no++;
   
-      $('#cards_container').append(
+      $('#cards_container').prepend(
         request_ele
       );
     }

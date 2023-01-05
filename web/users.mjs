@@ -7,6 +7,7 @@ add_user('0x0000000000000000000000000000000000000000', { authorization_status: '
 add_user('0x5f3a14d4e21e74455945f26a34a852151a87efa8', { authorization_status: 'authorized', user_type: 'admin', name: 'Admin User' });
 add_user('0xcd5ffc1a56244f9b21a72cd6cd73adba90e8b490', { authorization_status: 'authorized', user_type: 'patient', name: 'Dan Arnin', aadhaar: '567435356343' });
 add_user('0x7f40f621bda647b841728ee9ab8b1f9b661745ed', { authorization_status: 'authorized', user_type: 'hospital', name: 'Assure Hospital', hin: '33faf' });
+add_user('0xe2a90d7ab8a1044be7f02ba3be1f70de9f660efe', { authorization_status: 'authorized', user_type: 'hospital', name: 'Cookie Hospital', hin: '33fafafaf' });
 
 // get user information
 export function get_user(wallet_address) {

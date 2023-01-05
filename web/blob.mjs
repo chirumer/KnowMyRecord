@@ -6,7 +6,7 @@ import path from 'path'
 import fs from 'fs';
 import { randomUUID } from 'crypto';
 
-export const blob_access_list = new Map();
+export const blob_access_set = new Map();
 
 const blob_infos = new Map();
 
@@ -32,8 +32,8 @@ export function blob_access(wallet_address, blob_uuid) {
     return { can_access: true };
   }
 
-  access_list = blob_access_list.get(wallet_address);
-  if (access_list != undefined && access_list.includes(blob_uuid)) {
+  const access_set = blob_access_set.get(wallet_address);
+  if (access_set != undefined && access_set.has(blob_uuid)) {
     return { can_access: true };
   }
 
@@ -81,4 +81,18 @@ export function get_verified_blobs(wallet_address) {
   }
 
   return verified_blobs;
+}
+
+export function authorize_viewing_permission(viewer, patient) {
+  const accessible_blobs = blob_access_set.get(viewer) ?? new Set();
+
+  blob_infos.forEach((blob_info, blob_uuid) => {
+
+    if (blob_info.verification_status == 'verified' 
+        && blob_info.patient == patient) {
+
+      accessible_blobs.add(blob_uuid);
+    }
+  });
+  blob_access_set.set(viewer, accessible_blobs);
 }

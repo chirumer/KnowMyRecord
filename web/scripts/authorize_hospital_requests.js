@@ -49,9 +49,15 @@ function connect_to_websocket() {
                         .text(`${key}: ${value}`)
                     );
                   }),
-                  $('<a/>')
-                    .prop('href', '/blob?' + new URLSearchParams({ blob_uuid: data.blob_id }))
-                    .text('view record'),
+                  (() => {
+                    if (data.blob_id != undefined) {
+                      return (
+                        $('<a/>')
+                        .prop('href', '/blob?' + new URLSearchParams({ blob_uuid: data.blob_id }))
+                        .text('view record')
+                      );
+                    }
+                  })(),
                   $('<div/>')
                     .addClass('text-center')
                     .append(
@@ -72,7 +78,7 @@ function connect_to_websocket() {
           )
       );
 
-      $('#cards_container').append(
+      $('#cards_container').prepend(
         request_ele
       );
     }

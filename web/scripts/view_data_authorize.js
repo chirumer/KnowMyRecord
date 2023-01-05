@@ -1,7 +1,7 @@
 import { ethers } from "/node_modules/ethers/ethers.esm.js";
 
 $('#authorize_btn').prop('disabled', true);
-let addition_contract, signer;
+let view_contract, signer;
 (async () => {
 
   signer =
@@ -16,14 +16,14 @@ let addition_contract, signer;
     }
   })();
 
-  const { contract_address } = await (await fetch('/contract_address?' + new URLSearchParams({ contract: 'addition_contract' }))).json();
-  const { contract_abi } = await (await fetch('/contract_abi?' + new URLSearchParams({ contract: 'addition_contract' }))).json();
+  const { contract_address } = await (await fetch('/contract_address?' + new URLSearchParams({ contract: 'view_contract' }))).json();
+  const { contract_abi } = await (await fetch('/contract_abi?' + new URLSearchParams({ contract: 'view_contract' }))).json();
 
   const contract = new ethers.Contract(contract_address, contract_abi, signer);
   return contract;
 
 })().then(contract => {
-  addition_contract = contract;
+  view_contract = contract;
   $('#authorize_btn').prop('disabled', false);
 }).catch((err) => {
   alert(err);
@@ -48,7 +48,7 @@ $('#authorize_btn').click(async () => {
 
     try {
       const response = 
-      await addition_contract.grantRequest(
+      await view_contract.grantRequest(
         req_id
       );
      return response;
@@ -62,7 +62,7 @@ $('#authorize_btn').click(async () => {
     $('#authorize_btn').prop('disabled', false);
     return;
   }
-
+  
 
   // change screen to track confirmations
   $('#container').html('loading..');

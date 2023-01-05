@@ -47,7 +47,7 @@ function connect_to_websocket() {
           )
       );
 
-      $('#cards_container').append(
+      $('#cards_container').prepend(
         activity_ele
       );
     }

@@ -117,7 +117,7 @@ user_verification_ws_server.on('connection', socket => {
   });
 
   const unverified_users = get_unverified_users();
-  unverified_users.forEach(user => {
+  unverified_users.reverse().forEach(user => {
 
     const send_data = {
       type: 'user_verification_request',
@@ -141,7 +141,7 @@ activity_ws_server.on('connection', socket => {
   }); 
 
   const activities = get_user_activity(activity_sockets.get(socket));
-  activities.forEach(activity => {
+  activities.reverse().forEach(activity => {
 
     const send_data = {
       type: 'activity',
@@ -165,7 +165,7 @@ hospital_authorization_ws_server.on('connection', socket => {
   }); 
 
   const authorization_requests = get_pending_requests(hospital_authorization_sockets.get(socket));
-  authorization_requests.forEach(request_data => {
+  authorization_requests.reverse().forEach(request_data => {
 
     const { request_type, ...data } = request_data;
 
