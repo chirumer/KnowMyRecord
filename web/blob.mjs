@@ -62,5 +62,5 @@ export async function add_unverified_blob(_blob_info) {
 }
 
 export function verify_blob(blob_uuid) {
-  blob_info.get(blob_uuid).verification_status = 'verified';
+  blob_infos.get(blob_uuid).verification_status = 'verified';
 }
