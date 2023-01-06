@@ -2,7 +2,7 @@ import { WebSocketServer } from 'ws';
 import http from 'http';
 import { get_user_activity, get_pending_requests } from './contract_activity.mjs';
 import { wallet_address_from_token } from './user_identification.mjs';
-import { get_user } from './users.mjs';
+import { get_user, get_unverified_users } from './users.mjs';
 
 export function init_sockets(app) {
   const server = http.createServer(app);
