@@ -32,12 +32,12 @@ import formidableMiddleware from 'express-formidable';
 import { recoverTypedSignature } from '@metamask/eth-sig-util';
 
 import { wallet_address_from_token } from './user_identification.mjs'
-import { get_user, add_user, get_username, change_authorization_status,
+import { get_user, add_user, get_username,
           get_patient_with_aadhaar, get_hospital_with_hin } from './users.mjs'
-import { authorize, patient_route, hospital_route, admin_route } from './user_identification.mjs'
+import { authorize, patient_route, hospital_route, admin_route, researcher_route } from './user_identification.mjs'
 import { get_unverified_users,  } from './users.mjs'
 import { nonces } from './user_identification.mjs';
-import { get_blob_info, get_verified_blobs, blob_access, add_unverified_blob } from './blob.mjs';
+import { get_blob_info, get_verified_blobs, blob_access, add_unverified_blob, get_all_verified_blobs, get_blob_with_name } from './blob.mjs';
 import { randomUUID } from 'crypto'
 import { contract_addresses, contract_abis } from './contract_infos.mjs';
 import { init_sockets, update_user_verification_sockets } from './sockets.mjs';
@@ -94,6 +94,9 @@ app.get('/', (req, res) => {
   }
   else if (user.user_type == 'admin') {
     res.render('admin_dashboard', { username: user.name });
+  }
+  else if (user.user_type == 'researcher') {
+    res.render('researcher_dashboard', { username: user.name });
   }
 });
 
@@ -370,7 +373,7 @@ app.get('/patient_past_data/request', hospital_route, (req, res) => {
 app.get('/patient_past_data/view', hospital_route, (req, res) => {
   const wallet_address = req.wallet_address;
   const username = get_username(req.wallet_address);
-  
+
   if (!req.query?.patient) {
     const patients = get_accessible_patients(wallet_address);
     const patient_infos = patients.map(wallet_address => {
@@ -463,6 +466,28 @@ app.get('/past_data', patient_route, (req, res) => {
   });
 
   res.render('past_data', { username, blobs });
+});
+
+app.get('/view_records', researcher_route, (req, res) => {
+  const username = get_username(req.wallet_address);
+
+  const blobs_unfiltered = get_all_verified_blobs();
+  const blobs = blobs_unfiltered.map(blob => {
+    const { blob_name, description } = blob;
+    return { blob_name, description };
+  });
+
+  res.render('view_records', { username, blobs });
+});
+
+app.get('/research/blob', researcher_route, (req, res) => {
+  const username = get_username(req.wallet_address);
+  const blob_name = req.query.blob_name;
+
+  const blob_uuid = get_blob_with_name(blob_name);
+  const blob_info = get_blob_info(blob_uuid);
+
+  res.attachment(blob_info.file_name).sendFile(path.join(__dirname, `blobs/${blob_info.blob_name}`)); 
 });
 
 app.get('/blob', authorize, (req, res) => {

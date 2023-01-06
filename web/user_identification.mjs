@@ -75,3 +75,16 @@ export function admin_route(req, res, next) {
     }
   });
 }
+
+export function researcher_route(req, res, next) {
+
+  authorize(req, res, () => {
+    if (get_user_type(req.wallet_address) != 'researcher') {
+      const HTTP_UNAUTHORIZED = 401;
+      res.status(HTTP_UNAUTHORIZED).end();
+    }
+    else {
+      next();
+    }
+  });
+}

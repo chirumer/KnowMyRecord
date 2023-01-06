@@ -96,3 +96,21 @@ export function authorize_viewing_permission(viewer, patient) {
   });
   blob_access_set.set(viewer, accessible_blobs);
 }
+
+export function get_blob_with_name(blob_name) {
+  for (const [blob_uuid, blob_info] of blob_infos) {
+    if (blob_info.blob_name == blob_name) {
+      return blob_uuid;
+    }
+  }
+}
+
+export function get_all_verified_blobs() {
+  const blobs = []
+  blob_infos.forEach(blob => {
+    if (blob.verification_status == 'verified') {
+      blobs.push(blob);
+    }
+  });
+  return blobs;
+}
