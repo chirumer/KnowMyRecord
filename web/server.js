@@ -25,7 +25,6 @@ import fs from 'fs'
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import jwt from 'jsonwebtoken';
-import url from 'url';
 import formidableMiddleware from 'express-formidable';
 
 
@@ -35,21 +34,20 @@ import { wallet_address_from_token } from './user_identification.mjs'
 import { get_user, add_user, get_username,
           get_patient_with_aadhaar, get_hospital_with_hin } from './users.mjs'
 import { authorize, patient_route, hospital_route, admin_route, researcher_route } from './user_identification.mjs'
-import { get_unverified_users,  } from './users.mjs'
 import { nonces } from './user_identification.mjs';
 import { get_blob_info, get_verified_blobs, blob_access, add_unverified_blob, get_all_verified_blobs, get_blob_with_name } from './blob.mjs';
 import { randomUUID } from 'crypto'
 import { contract_addresses, contract_abis } from './contract_infos.mjs';
 import { init_sockets, update_user_verification_sockets } from './sockets.mjs';
 
-import { get_accessible_patients } from './contract_listeners.mjs';
+import { get_accessible_patients, init_listeners } from './contract_listeners.mjs';
 import { get_pending_requests, close_pending_requests } from './contract_activity.mjs';
 
 
 
 const app = express();
 const server = init_sockets(app);
-
+init_listeners();
 
 // express middleware
 app.set('view engine', 'pug');
