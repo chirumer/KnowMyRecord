@@ -29,6 +29,7 @@ export function init_listeners() {
   const addition_contract = new ethers.Contract(contract_addresses.addition_contract, contract_abis.addition_contract, provider);
   addition_contract.on('RequestAddition', (patient, hospital, blob_id, blob_checksum, req_id) => {
 
+    const default_admin = '0x0000000000000000000000000000000000000000';
     patient = patient.toLowerCase();
     hospital = hospital.toLowerCase();
     req_id = req_id.toNumber();
@@ -58,6 +59,16 @@ export function init_listeners() {
       req_id
     });
 
+    add_to_user_activity(default_admin, { 
+      event: 'Record Addition Request',
+      timestamp,
+      patient_aadhaar,
+      hospital_HIN,
+      blob_id,
+      blob_checksum,
+      req_id
+    });
+
     const hospital_name = get_user(hospital).name;
     const request = `${hospital_name} wants to add a patient record.`;
     const request_type = 'record addition';
@@ -70,6 +81,7 @@ export function init_listeners() {
     const timestamp = Date.now();
     update_blob_timestamp(blob_id, timestamp);
 
+    const default_admin = '0x0000000000000000000000000000000000000000';
     const { patient, hospital } = blob_infos.get(blob_id);
 
     add_to_user_activity(hospital, { 
@@ -84,6 +96,12 @@ export function init_listeners() {
       blob_id
     });
 
+    add_to_user_activity(default_admin, { 
+      event: 'Record Addition Granted',
+      timestamp,
+      blob_id
+    });
+
     close_pending_requests_by_blob_id(patient, blob_id);
   });
 
@@ -92,6 +110,7 @@ export function init_listeners() {
 
   view_contract.on('RequestView', (patient, hospital, req_id) => {
 
+    const default_admin = '0x0000000000000000000000000000000000000000';
     patient = patient.toLowerCase();
     hospital = hospital.toLowerCase();
     req_id = req_id.toNumber();
@@ -114,6 +133,14 @@ export function init_listeners() {
       req_id
     });
 
+    add_to_user_activity(default_admin, { 
+      event: 'Data Viewing Request',
+      timestamp,
+      patient_aadhaar,
+      hospital_HIN,
+      req_id
+    });
+
     const hospital_name = get_user(hospital).name;
     const request = `${hospital_name} wants to view your data.`;
     const request_type = 'view data';
@@ -122,6 +149,7 @@ export function init_listeners() {
 
   view_contract.on('RequestGranted', (patient, hospital) => {
 
+    const default_admin = '0x0000000000000000000000000000000000000000';
     patient = patient.toLowerCase();
     hospital = hospital.toLowerCase();
 
@@ -140,6 +168,12 @@ export function init_listeners() {
     });
 
     add_to_user_activity(patient, { 
+      event: 'Viewing Permission Granted',
+      timestamp,
+      hospital_HIN
+    });
+
+    add_to_user_activity(default_admin, { 
       event: 'Viewing Permission Granted',
       timestamp,
       hospital_HIN

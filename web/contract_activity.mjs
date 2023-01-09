@@ -1,4 +1,5 @@
 import { update_user_activity_socket, update_hospital_authorization_socket} from './sockets.mjs';
+import { get_user } from './users.mjs';
 
 const user_activity = new Map();
 
@@ -10,6 +11,10 @@ export function add_to_user_activity(wallet_address, activity) {
 }
 
 export function get_user_activity(wallet_address) {
+  if (get_user(wallet_address).type == 'admin') {
+    const default_admin = '0x0000000000000000000000000000000000000000';
+    return user_activity.get(default_admin) ?? [];
+  }
   return user_activity.get(wallet_address) ?? [];
 }
 
