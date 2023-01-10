@@ -1,8 +1,8 @@
 import { WebSocketServer } from 'ws';
 import http from 'http';
-import { get_user_activity, get_pending_requests } from './contract_activity.mjs';
+import { get_user_activity, get_pending_requests, add_to_user_activity } from './contract_activity.mjs';
 import { wallet_address_from_token } from './user_identification.mjs';
-import { get_user, get_unverified_users } from './users.mjs';
+import { get_user, get_unverified_users, change_authorization_status } from './users.mjs';
 
 export function init_sockets(app) {
   const server = http.createServer(app);
@@ -106,6 +106,14 @@ user_verification_ws_server.on('connection', socket => {
 
       const { wallet_address, new_authorization_status } = data;
       change_authorization_status(wallet_address, new_authorization_status);
+      const default_admin = '0x0000000000000000000000000000000000000000';
+      const timestamp = Date.now();
+      add_to_user_activity(default_admin, { 
+        event: 'Admin Authorized User',
+        timestamp,
+        authorized_wallet_address: wallet_address,
+        new_authorization_status: new_authorization_status
+      });
 
       const { request_no } = data;
       socket.send(JSON.stringify({ type: 'response_received', data: { request_no } }));

@@ -11,7 +11,7 @@ export function add_to_user_activity(wallet_address, activity) {
 }
 
 export function get_user_activity(wallet_address) {
-  if (get_user(wallet_address).type == 'admin') {
+  if (get_user(wallet_address).user_type == 'admin') {
     const default_admin = '0x0000000000000000000000000000000000000000';
     return user_activity.get(default_admin) ?? [];
   }
